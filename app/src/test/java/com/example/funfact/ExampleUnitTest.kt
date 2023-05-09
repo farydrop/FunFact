@@ -1,4 +1,4 @@
-package com.example.funfuct
+package com.example.funfact
 
 import org.junit.Test
 

@@ -1,8 +1,8 @@
-package com.example.funfuct.view
+package com.example.funfact.view
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.example.funfuct.R
+import com.example.funfact.R
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
