@@ -68,4 +68,15 @@ dependencies {
     implementation "io.reactivex.rxjava3:rxandroid:$rxandroid_version"
     implementation "io.reactivex.rxjava3:rxjava:$rxjava_version"
     implementation "io.reactivex.rxjava3:rxkotlin:$rxkotlin_version"
+
+    // Preferences DataStore
+    implementation "androidx.datastore:datastore-preferences:1.1.0-alpha04"
+
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
+
+    // Coroutine Lifecycle Scopes
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.6.1"
 }
