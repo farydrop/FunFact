@@ -1,19 +1,18 @@
 package com.example.funfact.view
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
-import android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET
-import android.opengl.Visibility
+import android.net.NetworkCapabilities.*
 import android.os.Build
 import android.os.Bundle
-import android.view.View.GONE
+import android.util.Log
 import android.view.View.VISIBLE
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
 import com.example.funfact.BuildConfig
 import com.example.funfact.R
 import com.example.funfact.databinding.ActivityStartBinding
@@ -21,14 +20,12 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
-import java.net.InetAddress
 import java.util.*
+
 
 class StartActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityStartBinding
-
-    //private val firebaseRemoteConfig: FirebaseRemoteConfig
     private val remoteConfig: FirebaseRemoteConfig = Firebase.remoteConfig
 
     @RequiresApi(Build.VERSION_CODES.M)
@@ -36,16 +33,42 @@ class StartActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityStartBinding.inflate(layoutInflater)
-
-        //val remoteConfig: FirebaseRemoteConfig = Firebase.remoteConfig
         val configSettings = remoteConfigSettings {
             minimumFetchIntervalInSeconds = 3600
         }
         remoteConfig.setConfigSettingsAsync(configSettings)
         remoteConfig.setDefaultsAsync(R.xml.url_default_value)
         getValueFromFireBaseRemoteConfig()
-
         setContentView(binding.root)
+
+        drawLayout()
+
+        if (isSharedSaved()) {
+            val sharedPreference = getSharedPreferences("application", MODE_PRIVATE)
+            val urlText = remoteConfig.getString("url")
+            val text = sharedPreference.getString("URL", urlText)
+            if (urlText.isEmpty() || checkIsEmu()) {
+                startActivity(Intent(this, MainActivity::class.java))
+            } else {
+                with(binding.webView) {
+                    webViewClient = WebViewClient()
+                    if (text != null) {
+                        loadUrl(text)
+                    }
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.javaScriptCanOpenWindowsAutomatically = true
+                    settings.loadWithOverviewMode = true
+                    settings.useWideViewPort = true
+                    settings.databaseEnabled = true
+                    settings.setSupportZoom(true)
+                    settings.allowFileAccess = true
+                    settings.allowContentAccess = true
+                }
+            }
+        } else {
+            startActivity(Intent(this, MainActivity::class.java))
+        }
 
     }
 
@@ -59,23 +82,10 @@ class StartActivity : AppCompatActivity() {
         remoteConfig.fetchAndActivate().addOnCompleteListener(this) { task ->
             if (task.isSuccessful) {
                 val urlText = remoteConfig.getString("url")
-                if (urlText.isEmpty() || checkIsEmu()) {
-                    startActivity(Intent(this, MainActivity::class.java))
-                } else {
-                    with(binding.webView) {
-                        webViewClient = WebViewClient()
-                        loadUrl(urlText)
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.javaScriptCanOpenWindowsAutomatically = true
-                        settings.loadWithOverviewMode = true
-                        settings.useWideViewPort = true
-                        settings.databaseEnabled = true
-                        settings.setSupportZoom(true)
-                        settings.allowFileAccess = true
-                        settings.allowContentAccess = true
-                    }
-                }
+                val sharedPreference = getSharedPreferences("application", MODE_PRIVATE)
+                var editor = sharedPreference.edit()
+                editor.putString("URL", urlText)
+                editor.apply()
             } else {
                 Toast.makeText(
                     this,
@@ -86,13 +96,41 @@ class StartActivity : AppCompatActivity() {
         }
     }
 
+    private fun isSharedSaved(): Boolean {
+        val sharedPref = getSharedPreferences("application", MODE_PRIVATE)
+        return sharedPref.contains("URL")
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.M)
     private fun isInternetAvailable(): Boolean {
-        return try {
-            val ipAddr: InetAddress = InetAddress.getByName("https://google.com")
-            //You can replace it with your name
-            !ipAddr.equals("")
-        } catch (e: Exception) {
-            false
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (connectivityManager != null) {
+            val capabilities =
+                connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+            if (capabilities != null) {
+                if (capabilities.hasTransport(TRANSPORT_CELLULAR)) {
+                    Log.i("Internet", "NetworkCapabilities.TRANSPORT_CELLULAR")
+                    return true
+                } else if (capabilities.hasTransport(TRANSPORT_WIFI)) {
+                    Log.i("Internet", "NetworkCapabilities.TRANSPORT_WIFI")
+                    return true
+                } else if (capabilities.hasTransport(TRANSPORT_ETHERNET)) {
+                    Log.i("Internet", "NetworkCapabilities.TRANSPORT_ETHERNET")
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun drawLayout() {
+        if (isInternetAvailable()) {
+            binding.webView.visibility = VISIBLE
+        } else {
+            startActivity(Intent(this, NoNetworkActivity::class.java))
+            finish()
         }
     }
 
