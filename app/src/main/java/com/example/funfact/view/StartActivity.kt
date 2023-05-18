@@ -14,6 +14,7 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.versionedparcelable.VersionedParcel.ParcelException
 import com.example.funfact.BuildConfig
 import com.example.funfact.R
 import com.example.funfact.databinding.ActivityStartBinding
@@ -42,6 +43,8 @@ class StartActivity : AppCompatActivity() {
         }
         remoteConfig.setConfigSettingsAsync(configSettings)
         remoteConfig.setDefaultsAsync(R.xml.url_default_value)
+        getValueFromFireBaseRemoteConfig()
+        //updateRemoteConfig()
 
         setContentView(binding.root)
 
@@ -58,9 +61,6 @@ class StartActivity : AppCompatActivity() {
         getUrl(urlText)
         if (!isSharedSaved()) {
             getValueFromFireBaseRemoteConfig()
-            //saveUrl(urlText)
-            getUrl(urlText)
-            //val urlText = remoteConfig.getString("url")
             if (urlText.isEmpty() || checkIsEmu()) {
                 startActivity(Intent(this, MainActivity::class.java))
             } else {
@@ -107,9 +107,9 @@ class StartActivity : AppCompatActivity() {
         remoteConfig.fetchAndActivate()
     }
 
-    private fun updateRemoteConfig(){
+    private fun updateRemoteConfig() {
         remoteConfig.addOnConfigUpdateListener(object : ConfigUpdateListener {
-            override fun onUpdate(configUpdate : ConfigUpdate) {
+            override fun onUpdate(configUpdate: ConfigUpdate) {
                 Log.d(TAG, "Updated keys: " + configUpdate.updatedKeys);
 
                 if (configUpdate.updatedKeys.contains("welcome_message")) {
@@ -117,7 +117,7 @@ class StartActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onError(error : FirebaseRemoteConfigException) {
+            override fun onError(error: FirebaseRemoteConfigException) {
                 Log.w(TAG, "Config update error with code: " + error.code, error)
             }
         })
