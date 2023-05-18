@@ -1,6 +1,7 @@
 package com.example.funfact.view
 
 import android.annotation.SuppressLint
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -8,7 +9,6 @@ import android.net.NetworkCapabilities.*
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.View.VISIBLE
 import android.webkit.CookieManager
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -18,7 +18,10 @@ import com.example.funfact.BuildConfig
 import com.example.funfact.R
 import com.example.funfact.databinding.ActivityStartBinding
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ConfigUpdate
+import com.google.firebase.remoteconfig.ConfigUpdateListener
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigException
 import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
 import java.util.*
@@ -39,31 +42,41 @@ class StartActivity : AppCompatActivity() {
         }
         remoteConfig.setConfigSettingsAsync(configSettings)
         remoteConfig.setDefaultsAsync(R.xml.url_default_value)
-        getValueFromFireBaseRemoteConfig()
+
         setContentView(binding.root)
 
-        setSaveUrl()
-        getSaveUrl()
+        showWebView()
 
+    }
 
-        if (isSharedSaved()) {
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun showWebView() {
+        getValueFromFireBaseRemoteConfig()
+        updateRemoteConfig()
+        val urlText = remoteConfig.getString("url")
+        saveUrl(urlText)
+        getUrl(urlText)
+        if (!isSharedSaved()) {
+            getValueFromFireBaseRemoteConfig()
+            //saveUrl(urlText)
+            getUrl(urlText)
+            //val urlText = remoteConfig.getString("url")
+            if (urlText.isEmpty() || checkIsEmu()) {
+                startActivity(Intent(this, MainActivity::class.java))
+            } else {
+                saveUrl(urlText)
+                getUrl(urlText)
+                getWebView(urlText)
+            }
+        } else {
             if (isInternetAvailable()) {
-                val sharedPreference = getSharedPreferences("application", Context.MODE_PRIVATE)
-                val urlText = remoteConfig.getString("url")
-                val text = sharedPreference.getString("url", urlText)
-                if (urlText.isEmpty() || checkIsEmu()) {
-                    startActivity(Intent(this, MainActivity::class.java))
-                } else {
-                    getWebView(text!!)
-                }
+                getValueFromFireBaseRemoteConfig()
+                getWebView(urlText)
             } else {
                 startActivity(Intent(this, NoNetworkActivity::class.java))
                 finish()
             }
-        } else {
-            setSaveUrl()
         }
-
     }
 
     override fun onBackPressed() {
@@ -72,7 +85,7 @@ class StartActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun getWebView(url: String){
+    private fun getWebView(url: String) {
         with(binding.webView) {
             webViewClient = WebViewClient()
             loadUrl(url)
@@ -91,32 +104,36 @@ class StartActivity : AppCompatActivity() {
     }
 
     private fun getValueFromFireBaseRemoteConfig() {
-        remoteConfig.fetchAndActivate().addOnCompleteListener(this) { task ->
-            if (task.isSuccessful) {
-                val urlText = remoteConfig.getString("url")
-                //setSaveUrl(urlText)
-            } else {
-                Toast.makeText(
-                    this,
-                    "Fetch failed",
-                    Toast.LENGTH_SHORT,
-                ).show()
-            }
-        }
+        remoteConfig.fetchAndActivate()
     }
 
-    private fun setSaveUrl() {
+    private fun updateRemoteConfig(){
+        remoteConfig.addOnConfigUpdateListener(object : ConfigUpdateListener {
+            override fun onUpdate(configUpdate : ConfigUpdate) {
+                Log.d(TAG, "Updated keys: " + configUpdate.updatedKeys);
+
+                if (configUpdate.updatedKeys.contains("welcome_message")) {
+                    remoteConfig.activate()
+                }
+            }
+
+            override fun onError(error : FirebaseRemoteConfigException) {
+                Log.w(TAG, "Config update error with code: " + error.code, error)
+            }
+        })
+    }
+
+    private fun saveUrl(url: String) {
         val urlText = remoteConfig.getString("url")
         val sharedPreference = getSharedPreferences("application", Context.MODE_PRIVATE)
         val editor = sharedPreference.edit()
-        editor.putString("url", urlText)
+        editor.putString("url", url)
         editor.apply()
     }
 
-    private fun getSaveUrl(): String? {
+    private fun getUrl(url: String): String? {
         val sharedPreference = getSharedPreferences("application", Context.MODE_PRIVATE)
-        val urlText = remoteConfig.getString("url")
-        return sharedPreference.getString("url", urlText)
+        return sharedPreference.getString("url", url)
     }
 
     private fun isSharedSaved(): Boolean {
