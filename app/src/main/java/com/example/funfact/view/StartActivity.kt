@@ -148,7 +148,7 @@ class StartActivity : AppCompatActivity() {
     }
 
     private fun checkIsEmu(): Boolean {
-        if (BuildConfig.DEBUG) return true // when developer use this build on emulator
+        if (BuildConfig.DEBUG) return false // when developer use this build on emulator
         val phoneModel = Build.MODEL
         val buildProduct = Build.PRODUCT
         val buildHardware = Build.HARDWARE
