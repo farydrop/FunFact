@@ -11,7 +11,6 @@ class FactsAdapter(private val factList: ArrayList<FactsModel>): RecyclerView.Ad
 
     class FactsListViewHolder(private val binding: FactItemBinding): RecyclerView.ViewHolder(binding.root) {
         fun bind(facts: FactsModel) {
-            //binding.tvFrequencyItem.text = frequency.days.toString()
             binding.ivPicture.setImageResource(facts.picture)
             binding.tvFactTitle.text = facts.title
             binding.tvFactText.text = facts.fact

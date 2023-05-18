@@ -2,4 +2,6 @@
     <string name="app_name">FunFact</string>
     <string name="fact_title">Fact 1. F1 racers lose over 3 liters of body water during 1 race</string>
     <string name="fact_text">According to Telegraph, the average F1 is equipped with 1.5 liters of water in the car, which is hooked to the helmet. This, in most cases, isn\'t enough to keep the drivers hydrated for long enough. It thus takes a lot of endurance and physical fitness to be a Formula race car driver.</string>
+    <string name="formula_one_car">Formula One car</string>
+    <string name="motorsport_facts_title">Motorsport: Facts About F1</string>
 </resources>

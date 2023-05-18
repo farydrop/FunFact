@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View.VISIBLE
+import android.webkit.CookieManager
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -41,33 +42,26 @@ class StartActivity : AppCompatActivity() {
         getValueFromFireBaseRemoteConfig()
         setContentView(binding.root)
 
-        drawLayout()
+        setSaveUrl()
+        getSaveUrl()
+
 
         if (isSharedSaved()) {
-            val sharedPreference = getSharedPreferences("application", MODE_PRIVATE)
-            val urlText = remoteConfig.getString("url")
-            val text = sharedPreference.getString("URL", urlText)
-            if (urlText.isEmpty() || checkIsEmu()) {
-                startActivity(Intent(this, MainActivity::class.java))
-            } else {
-                with(binding.webView) {
-                    webViewClient = WebViewClient()
-                    if (text != null) {
-                        loadUrl(text)
-                    }
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.javaScriptCanOpenWindowsAutomatically = true
-                    settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
-                    settings.databaseEnabled = true
-                    settings.setSupportZoom(true)
-                    settings.allowFileAccess = true
-                    settings.allowContentAccess = true
+            if (isInternetAvailable()) {
+                val sharedPreference = getSharedPreferences("application", Context.MODE_PRIVATE)
+                val urlText = remoteConfig.getString("url")
+                val text = sharedPreference.getString("url", urlText)
+                if (urlText.isEmpty() || checkIsEmu()) {
+                    startActivity(Intent(this, MainActivity::class.java))
+                } else {
+                    getWebView(text!!)
                 }
+            } else {
+                startActivity(Intent(this, NoNetworkActivity::class.java))
+                finish()
             }
         } else {
-            startActivity(Intent(this, MainActivity::class.java))
+            setSaveUrl()
         }
 
     }
@@ -78,14 +72,29 @@ class StartActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
+    private fun getWebView(url: String){
+        with(binding.webView) {
+            webViewClient = WebViewClient()
+            loadUrl(url)
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.setAcceptCookie(true)
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.javaScriptCanOpenWindowsAutomatically = true
+            settings.loadWithOverviewMode = true
+            settings.useWideViewPort = true
+            settings.databaseEnabled = true
+            settings.setSupportZoom(true)
+            settings.allowFileAccess = true
+            settings.allowContentAccess = true
+        }
+    }
+
     private fun getValueFromFireBaseRemoteConfig() {
         remoteConfig.fetchAndActivate().addOnCompleteListener(this) { task ->
             if (task.isSuccessful) {
                 val urlText = remoteConfig.getString("url")
-                val sharedPreference = getSharedPreferences("application", MODE_PRIVATE)
-                var editor = sharedPreference.edit()
-                editor.putString("URL", urlText)
-                editor.apply()
+                //setSaveUrl(urlText)
             } else {
                 Toast.makeText(
                     this,
@@ -96,9 +105,23 @@ class StartActivity : AppCompatActivity() {
         }
     }
 
+    private fun setSaveUrl() {
+        val urlText = remoteConfig.getString("url")
+        val sharedPreference = getSharedPreferences("application", Context.MODE_PRIVATE)
+        val editor = sharedPreference.edit()
+        editor.putString("url", urlText)
+        editor.apply()
+    }
+
+    private fun getSaveUrl(): String? {
+        val sharedPreference = getSharedPreferences("application", Context.MODE_PRIVATE)
+        val urlText = remoteConfig.getString("url")
+        return sharedPreference.getString("url", urlText)
+    }
+
     private fun isSharedSaved(): Boolean {
-        val sharedPref = getSharedPreferences("application", MODE_PRIVATE)
-        return sharedPref.contains("URL")
+        val sharedPref = getSharedPreferences("application", Context.MODE_PRIVATE)
+        return sharedPref.contains("url")
     }
 
 
@@ -124,18 +147,8 @@ class StartActivity : AppCompatActivity() {
         return false
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    private fun drawLayout() {
-        if (isInternetAvailable()) {
-            binding.webView.visibility = VISIBLE
-        } else {
-            startActivity(Intent(this, NoNetworkActivity::class.java))
-            finish()
-        }
-    }
-
     private fun checkIsEmu(): Boolean {
-        if (BuildConfig.DEBUG) return false // when developer use this build on emulator
+        if (BuildConfig.DEBUG) return true // when developer use this build on emulator
         val phoneModel = Build.MODEL
         val buildProduct = Build.PRODUCT
         val buildHardware = Build.HARDWARE
